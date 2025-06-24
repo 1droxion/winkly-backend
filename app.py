@@ -1,51 +1,32 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-import uuid, json, time, os
-from datetime import datetime
+@app.route("/stripe-webhook", methods=["POST"])
+def stripe_webhook():
+    payload = request.data
+    sig_header = request.headers.get("stripe-signature")
+    endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
 
-app = Flask(__name__)
-CORS(app)
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+    except Exception as e:
+        print("Webhook Error:", e)
+        return "", 400
 
-LOG_FILE = "user_logs.json"
-if not os.path.exists(LOG_FILE):
-    with open(LOG_FILE, "w") as f:
-        json.dump([], f)
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        customer_email = session.get("customer_email")
+        ip = request.remote_addr
 
-def log_user(ip, action):
-    with open(LOG_FILE, "r") as f:
-        logs = json.load(f)
-    logs.append({
-        "ip": ip,
-        "action": action,
-        "time": datetime.utcnow().isoformat()
-    })
-    with open(LOG_FILE, "w") as f:
-        json.dump(logs, f, indent=2)
+        # Save VIP status
+        with open("vip_users.json", "r+") as f:
+            try:
+                data = json.load(f)
+            except:
+                data = []
 
-@app.route("/create_user", methods=["POST"])
-def create_user():
-    user_id = str(uuid.uuid4())
-    ip = request.remote_addr
-    log_user(ip, f"User created: {user_id}")
-    return jsonify({"user_id": user_id})
+            if ip not in data:
+                data.append(ip)
+                f.seek(0)
+                json.dump(data, f)
+                f.truncate()
+        print("✅ VIP Unlocked:", ip)
 
-@app.route("/match", methods=["GET"])
-def match_user():
-    ip = request.remote_addr
-    log_user(ip, "Requested match")
-    return jsonify({"matched": True, "room": str(uuid.uuid4())})
-
-@app.route("/coins", methods=["POST"])
-def get_coins():
-    data = request.get_json()
-    user_id = data.get("user_id")
-    ip = request.remote_addr
-    log_user(ip, f"Coins checked: {user_id}")
-    return jsonify({"coins": 5})
-
-@app.route("/")
-def home():
-    return "Winkly Backend Running!"
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    return "", 200
