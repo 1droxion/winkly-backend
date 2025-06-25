@@ -11,6 +11,7 @@ app = Flask(__name__)
 CORS(app)
 
 USER_FILE = "users.json"
+WITHDRAW_FILE = "withdrawals.json"
 STRIPE_SECRET = os.getenv("STRIPE_SECRET", "sk_test_...")
 stripe.api_key = STRIPE_SECRET
 
@@ -21,10 +22,22 @@ if os.path.exists(USER_FILE):
 else:
     users = {}
 
+# Load withdrawals
+if os.path.exists(WITHDRAW_FILE):
+    with open(WITHDRAW_FILE, "r") as f:
+        withdrawals = json.load(f)
+else:
+    withdrawals = []
+
 # Save users
 def save_users():
     with open(USER_FILE, "w") as f:
         json.dump(users, f, indent=2)
+
+# Save withdrawal requests
+def save_withdrawals():
+    with open(WITHDRAW_FILE, "w") as f:
+        json.dump(withdrawals, f, indent=2)
 
 @app.route("/register", methods=["POST"])
 def register():
@@ -133,24 +146,47 @@ def send_gift():
     sender = data.get("from")
     receiver = data.get("to")
     gift = data.get("gift")
-
     gift_cost = {"rose": 1, "heart": 3, "diamond": 5}
     cost = gift_cost.get(gift, 1)
-
     if sender not in users or receiver not in users:
         return jsonify({"error": "Invalid sender or receiver"})
     if users[sender]["coins"] < cost:
         return jsonify({"error": "Not enough coins"})
-
     users[sender]["coins"] -= cost
     users[receiver]["gifts_received"] += 1
     save_users()
-
     return jsonify({
         "message": f"{gift} sent from {sender} to {receiver}",
         "coins_left": users[sender]["coins"],
         "gifts": users[receiver]["gifts_received"]
     })
+
+@app.route("/withdraw-request", methods=["POST"])
+def withdraw_request():
+    data = request.json
+    email = data.get("email")
+    method = data.get("method")
+    address = data.get("address")
+    amount = float(data.get("amount", 0))
+
+    if email not in users:
+        return jsonify({"error": "User not found"})
+
+    if users[email].get("gifts_received", 0) * 0.05 < amount:
+        return jsonify({"error": "Insufficient earnings"})
+
+    request_id = str(uuid.uuid4())
+    withdrawals.append({
+        "id": request_id,
+        "email": email,
+        "method": method,
+        "address": address,
+        "amount": amount,
+        "status": "pending",
+        "timestamp": datetime.utcnow().isoformat()
+    })
+    save_withdrawals()
+    return jsonify({"success": True, "request_id": request_id})
 
 if __name__ == "__main__":
     app.run(debug=True)
