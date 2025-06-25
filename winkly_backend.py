@@ -127,5 +127,30 @@ def admin_stats():
         "girls": total_girls
     })
 
+@app.route("/send-gift", methods=["POST"])
+def send_gift():
+    data = request.json
+    sender = data.get("from")
+    receiver = data.get("to")
+    gift = data.get("gift")
+
+    gift_cost = {"rose": 1, "heart": 3, "diamond": 5}
+    cost = gift_cost.get(gift, 1)
+
+    if sender not in users or receiver not in users:
+        return jsonify({"error": "Invalid sender or receiver"})
+    if users[sender]["coins"] < cost:
+        return jsonify({"error": "Not enough coins"})
+
+    users[sender]["coins"] -= cost
+    users[receiver]["gifts_received"] += 1
+    save_users()
+
+    return jsonify({
+        "message": f"{gift} sent from {sender} to {receiver}",
+        "coins_left": users[sender]["coins"],
+        "gifts": users[receiver]["gifts_received"]
+    })
+
 if __name__ == "__main__":
     app.run(debug=True)
