@@ -8,12 +8,15 @@ app = Flask(__name__)
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
 
-# Load or init VIP and coin data
+# === Data files ===
 VIP_FILE = "vip_users.json"
 COIN_FILE = "user_coins.json"
+
+# Create if missing
 if not os.path.exists(VIP_FILE): json.dump([], open(VIP_FILE, "w"))
 if not os.path.exists(COIN_FILE): json.dump({}, open(COIN_FILE, "w"))
 
+# === Stripe Webhook ===
 @app.route("/stripe-webhook", methods=["POST"])
 def stripe_webhook():
     payload = request.data
@@ -22,19 +25,18 @@ def stripe_webhook():
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
     except Exception as e:
-        print("❌ Stripe error:", e)
+        print("❌ Stripe Error:", e)
         return "Invalid", 400
 
-    if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
         email = session.get("customer_email")
         amount = int(session.get("amount_total", 0)) / 100
         ip = request.remote_addr
 
-        # Check what they bought based on amount
+        # Map amount to product
         coins = 0
         is_vip = False
-
         if amount == 1.99:
             coins = 5
         elif amount == 5.00:
@@ -52,7 +54,7 @@ def stripe_webhook():
                     f.seek(0)
                     json.dump(data, f)
                     f.truncate()
-            print(f"👑 VIP granted to {ip}")
+            print(f"👑 VIP Granted to {ip}")
         elif coins > 0:
             with open(COIN_FILE, "r+") as f:
                 data = json.load(f)
@@ -60,10 +62,11 @@ def stripe_webhook():
                 f.seek(0)
                 json.dump(data, f)
                 f.truncate()
-            print(f"💰 {coins} coins added to {ip}")
+            print(f"💰 {coins} Coins Added to {ip}")
 
-    return "Success", 200
+    return "OK", 200
 
+# === VIP Check Route ===
 @app.route("/check-vip", methods=["GET"])
 def check_vip():
     ip = request.remote_addr
@@ -71,6 +74,7 @@ def check_vip():
         data = json.load(f)
     return jsonify({"isVIP": ip in data})
 
+# === Coins Check Route ===
 @app.route("/get-coins", methods=["GET"])
 def get_coins():
     ip = request.remote_addr
