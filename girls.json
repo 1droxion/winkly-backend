@@ -1,0 +1,33 @@
+// === girls.json === (public folder or fetchable file)
+[
+  {
+    "name": "Aanya",
+    "country": "🇮🇳 India",
+    "image": "https://i.imgur.com/t7fKp3b.jpg"
+  },
+  {
+    "name": "Isabella",
+    "country": "🇲🇽 Mexico",
+    "image": "https://i.imgur.com/GpB2yJk.jpg"
+  },
+  {
+    "name": "Sofia",
+    "country": "🇷🇺 Russia",
+    "image": "https://i.imgur.com/7AX3pfa.jpg"
+  },
+  {
+    "name": "Mira",
+    "country": "🇧🇷 Brazil",
+    "image": "https://i.imgur.com/OmFf5WD.jpg"
+  },
+  {
+    "name": "Chloe",
+    "country": "🇺🇸 USA",
+    "image": "https://i.imgur.com/S3dV1as.jpg"
+  },
+  {
+    "name": "Lina",
+    "country": "🇫🇷 France",
+    "image": "https://i.imgur.com/DkxMNpo.jpg"
+  }
+]
