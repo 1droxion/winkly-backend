@@ -15,6 +15,8 @@ WITHDRAW_FILE = "withdrawals.json"
 STRIPE_SECRET = os.getenv("STRIPE_SECRET", "sk_test_...")
 stripe.api_key = STRIPE_SECRET
 
+COMMISSION_RATE = 0.20  # 20% platform commission
+
 # Load users
 if os.path.exists(USER_FILE):
     with open(USER_FILE, "r") as f:
@@ -172,7 +174,10 @@ def withdraw_request():
     if email not in users:
         return jsonify({"error": "User not found"})
 
-    if users[email].get("gifts_received", 0) * 0.05 < amount:
+    total_earned = users[email].get("gifts_received", 0) * 0.05
+    payout_after_fee = round(amount * (1 - COMMISSION_RATE), 2)
+
+    if total_earned < amount:
         return jsonify({"error": "Insufficient earnings"})
 
     request_id = str(uuid.uuid4())
@@ -182,11 +187,12 @@ def withdraw_request():
         "method": method,
         "address": address,
         "amount": amount,
+        "payout": payout_after_fee,
         "status": "pending",
         "timestamp": datetime.utcnow().isoformat()
     })
     save_withdrawals()
-    return jsonify({"success": True, "request_id": request_id})
+    return jsonify({"success": True, "request_id": request_id, "payout_after_fee": payout_after_fee})
 
 if __name__ == "__main__":
     app.run(debug=True)
