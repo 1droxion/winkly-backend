@@ -1,9 +1,9 @@
 {
   "name": "winkly-backend",
   "version": "1.0.0",
-  "main": "src/socket-server.js",
+  "main": "socket-server.js",
   "scripts": {
-    "start": "node src/socket-server.js"
+    "start": "node socket-server.js"
   },
   "dependencies": {
     "ws": "^8.15.1"
