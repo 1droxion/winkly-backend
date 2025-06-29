@@ -1,4 +1,3 @@
-
 // socket-server.js
 const WebSocket = require("ws");
 
@@ -11,8 +10,10 @@ let clients = [];
 
 wss.on("connection", (ws) => {
   clients.push(ws);
+  console.log("🔌 New client connected. Total:", clients.length);
 
   ws.on("message", (message) => {
+    console.log("💬 Received:", message.toString());
     for (let client of clients) {
       if (client !== ws && client.readyState === WebSocket.OPEN) {
         client.send(message.toString());
@@ -22,5 +23,6 @@ wss.on("connection", (ws) => {
 
   ws.on("close", () => {
     clients = clients.filter((client) => client !== ws);
+    console.log("❌ Client disconnected. Remaining:", clients.length);
   });
 });
