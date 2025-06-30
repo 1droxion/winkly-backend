@@ -1,23 +1,22 @@
-// socket-server.js
 const WebSocket = require("ws");
 
 const PORT = process.env.PORT || 8080;
-const wss = new WebSocket.Server({ port: PORT }, () => {
-  console.log(`✅ WebSocket Server running on port ${PORT}`);
-});
+const wss = new WebSocket.Server({ port: PORT }, () =>
+  console.log(`✅ WebSocket Server running on port ${PORT}`)
+);
 
 let clients = [];
 
 wss.on("connection", (ws) => {
   clients.push(ws);
-  console.log("🔌 New client connected. Total:", clients.length);
+  console.log("🔌 Client connected. Total:", clients.length);
 
   ws.on("message", (message) => {
-    for (let client of clients) {
+    clients.forEach((client) => {
       if (client !== ws && client.readyState === WebSocket.OPEN) {
         client.send(message.toString());
       }
-    }
+    });
   });
 
   ws.on("close", () => {
